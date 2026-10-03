@@ -1,6 +1,37 @@
-﻿namespace RideHailingApi_Dapper.Repository.Interfaces;
+﻿using RideHailingApi_Dapper.Domain.Entities;
+
+namespace RideHailingApi_Dapper.Repository.Interfaces;
 
 public interface IAuthRepository
 {
-    
+    Task<User?> GetUserByEmailAsync(string email);
+
+    Task<User?> GetUserByPhoneNumberAsync(string phoneNumber);
+
+    Task<User?> GetUserByIdAsync(int userId);
+
+    Task<User> CreateUserAsync(User user);
+
+    Task<EmailOtp?> GetActiveEmailOtpAsync(int userId);
+
+    Task<EmailOtp> CreateEmailOtpAsync(EmailOtp otp);
+
+    Task UpdateEmailOtpAsync(EmailOtp otp);
+
+    Task<PhoneOtp?> GetActivePhoneOtpAsync(int userId);
+
+    Task<PhoneOtp> CreatePhoneOtpAsync(PhoneOtp otp);
+
+    Task UpdatePhoneOtpAsync(PhoneOtp otp);
+
+    Task<PasswordResetOtp?> GetActivePasswordResetOtpAsync(int userId);
+
+    Task<PasswordResetOtp> CreatePasswordResetOtpAsync(
+        PasswordResetOtp otp);
+
+    Task UpdatePasswordResetOtpAsync(PasswordResetOtp otp);
+
+    Task UpdateUserAsync(User user);
+
+    Task<DriverProfile> CreateDriverProfileAsync(DriverProfile driverProfile); 
 }

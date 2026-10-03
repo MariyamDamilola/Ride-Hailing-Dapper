@@ -1,8 +1,9 @@
 ﻿using System.Net.Http.Headers;
+using RideHailingApi_Dapper.Services.Interfaces;
 
 namespace RideHailingApi_Dapper.Services.Implementations;
 
-public class SmsService
+public class SmsService : ISmsService
 {
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;

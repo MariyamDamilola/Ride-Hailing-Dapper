@@ -32,438 +32,442 @@ public class AdminService : IAdminService
         _logger = logger;
     }
 
-    public async Task<ApiResponse> GetUsersAsync()
+   public async Task<ApiResponse> GetUsersAsync()
+{
+    try
     {
-        try
-        {
-            var users = await _adminRepository.GetUsersAsync();
+        var users = await _adminRepository.GetUsersAsync();
 
-            return new ApiResponse
-            {
-                ResponseCode = "200",
-                ResponseMessage = "Users retrieved successfully",
-                Data = users.Select(user => new
-                {
-                    user.Id,
-                    user.FullName,
-                    user.Email,
-                    user.PhoneNumber,
-                    user.Role,
-                    user.IsEmailVerified,
-                    user.IsPhoneNumberVerified,
-                    user.IsActive,
-                    user.CreatedAt
-                })
-            };
-        }
-        catch (Exception ex)
+        return new ApiResponse
         {
-            _logger.LogError(
-                ex,
-                "Error occurred while retrieving users");
-
-            return new ApiResponse
+            ResponseCode = "200",
+            ResponseMessage = "Users retrieved successfully",
+            Data = users.Select(user => new
             {
-                ResponseCode = "500",
-                ResponseMessage = "Error occurred while retrieving users"
-            };
-        }
+                user.Id,
+                user.FullName,
+                user.Email,
+                user.PhoneNumber,
+                user.Role,
+                user.IsEmailVerified,
+                user.IsPhoneNumberVerified,
+                user.IsActive,
+                user.CreatedAt
+            })
+        };
     }
-
-    public async Task<ApiResponse> GetUserByIdAsync(int userId)
+    catch (Exception ex)
     {
-        try
+        _logger.LogError(
+            ex,
+            "Error occurred while retrieving users");
+
+        return new ApiResponse
         {
-            var user = await _adminRepository.GetUserByIdAsync(userId);
-
-            if (user == null)
-            {
-                return new ApiResponse
-                {
-                    ResponseCode = "404",
-                    ResponseMessage = "User not found"
-                };
-            }
-
-            return new ApiResponse
-            {
-                ResponseCode = "200",
-                ResponseMessage = "User retrieved successfully",
-                Data = new
-                {
-                    user.Id,
-                    user.FullName,
-                    user.Email,
-                    user.PhoneNumber,
-                    user.Role,
-                    user.IsEmailVerified,
-                    user.IsPhoneNumberVerified,
-                    user.IsActive,
-                    user.CreatedAt,
-                    user.UpdatedAt
-                }
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                $"Error occurred while retrieving user {userId}");
-
-            return new ApiResponse
-            {
-                ResponseCode = "500",
-                ResponseMessage = "Error occurred while retrieving user"
-            };
-        }
+            ResponseCode = "500",
+            ResponseMessage = "Error occurred while retrieving users"
+        };
     }
+}
 
-    public async Task<ApiResponse> GetPendingDriversAsync()
+public async Task<ApiResponse> GetUserByIdAsync(int userId)
+{
+    try
     {
-        try
+        var user = await _adminRepository.GetUserByIdAsync(userId);
+
+        if (user == null)
         {
-            var drivers =
-                await _adminRepository.GetPendingDriversAsync();
-
-            var result = new List<object>();
-
-            foreach (var driver in drivers)
+            return new ApiResponse
             {
-                var user =
-                    await _userRepository.GetByIdAsync(driver.UserId);
+                ResponseCode = "404",
+                ResponseMessage = "User not found"
+            };
+        }
 
-                result.Add(new
-                {
-                    driver.Id,
-                    driver.Status,
-                    driver.ApprovalReason,
-                    User = user == null
-                        ? null
-                        : new
-                        {
-                            user.Id,
-                            user.FullName,
-                            user.Email,
-                            user.PhoneNumber
-                        }
-                });
+        return new ApiResponse
+        {
+            ResponseCode = "200",
+            ResponseMessage = "User retrieved successfully",
+            Data = new
+            {
+                user.Id,
+                user.FullName,
+                user.Email,
+                user.PhoneNumber,
+                user.Role,
+                user.IsEmailVerified,
+                user.IsPhoneNumberVerified,
+                user.IsActive,
+                user.CreatedAt,
+                user.UpdatedAt
             }
-
-            return new ApiResponse
-            {
-                ResponseCode = "200",
-                ResponseMessage =
-                    "Pending drivers retrieved successfully",
-                Data = result
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Error occurred while retrieving pending drivers");
-
-            return new ApiResponse
-            {
-                ResponseCode = "500",
-                ResponseMessage =
-                    "Error occurred while retrieving pending drivers"
-            };
-        }
+        };
     }
-
-    public async Task<ApiResponse> ApproveDriverAsync(
-        int driverProfileId)
+    catch (Exception ex)
     {
-        try
+        _logger.LogError(
+            ex,
+            "Error occurred while retrieving user {UserId}",
+            userId);
+
+        return new ApiResponse
         {
-            var driver =
-                await _adminRepository
-                    .GetDriverProfileByIdAsync(driverProfileId);
-
-            if (driver == null)
-            {
-                return new ApiResponse
-                {
-                    ResponseCode = "404",
-                    ResponseMessage = "Driver profile not found"
-                };
-            }
-
-            if (driver.Status == ApprovalStatus.Approved)
-            {
-                return new ApiResponse
-                {
-                    ResponseCode = "400",
-                    ResponseMessage = "Driver is already approved"
-                };
-            }
-
-            var user =
-                await _userRepository.GetByIdAsync(driver.UserId);
-
-            if (user == null)
-            {
-                return new ApiResponse
-                {
-                    ResponseCode = "404",
-                    ResponseMessage = "Driver user not found"
-                };
-            }
-
-            driver.Status = ApprovalStatus.Approved;
-            driver.ApprovalReason = null;
-            driver.ApprovedAt = DateTime.UtcNow;
-
-            await _adminRepository.UpdateDriverProfileAsync(driver);
-
-            _logger.LogInformation(
-                $"Driver {driverProfileId} approved successfully");
-
-            await _auditLogRepository.CreateAsync(new AuditLog
-            {
-                UserId = driver.UserId,
-                UserRole = UserRole.Driver,
-                Action = "Driver Approved",
-                Status = AuditStatus.Success,
-                EntityType = "DriverProfile",
-                EntityId = driver.Id,
-                Description =
-                    $"Driver profile {driver.Id} was approved",
-                CreatedAt = DateTime.UtcNow
-            });
-
-            return new ApiResponse
-            {
-                ResponseCode = "200",
-                ResponseMessage = "Driver approved successfully"
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                $"Error occurred while approving driver {driverProfileId}");
-
-            return new ApiResponse
-            {
-                ResponseCode = "500",
-                ResponseMessage =
-                    "Error occurred while approving driver"
-            };
-        }
+            ResponseCode = "500",
+            ResponseMessage = "Error occurred while retrieving user"
+        };
     }
+}
 
-    public async Task<ApiResponse> RejectDriverAsync(
-        int driverProfileId,
-        RejectDriverRequestDto request)
+public async Task<ApiResponse> GetPendingDriversAsync()
+{
+    try
     {
-        try
+        var drivers = await _adminRepository.GetPendingDriversAsync();
+
+        var result = new List<object>();
+
+        foreach (var driver in drivers)
         {
-            var driver =
-                await _adminRepository
-                    .GetDriverProfileByIdAsync(driverProfileId);
+            var user = await _userRepository.GetByIdAsync(driver.UserId);
 
-            if (driver == null)
+            result.Add(new
             {
-                return new ApiResponse
-                {
-                    ResponseCode = "404",
-                    ResponseMessage = "Driver profile not found"
-                };
-            }
-
-            if (driver.Status == ApprovalStatus.Rejected)
-            {
-                return new ApiResponse
-                {
-                    ResponseCode = "400",
-                    ResponseMessage = "Driver is already rejected"
-                };
-            }
-
-            var user =
-                await _userRepository.GetByIdAsync(driver.UserId);
-
-            if (user == null)
-            {
-                return new ApiResponse
-                {
-                    ResponseCode = "404",
-                    ResponseMessage = "Driver user not found"
-                };
-            }
-
-            driver.Status = ApprovalStatus.Rejected;
-            driver.ApprovalReason = request.RejectionReason;
-            driver.ApprovedAt = null;
-
-            await _adminRepository.UpdateDriverProfileAsync(driver);
-
-            _logger.LogInformation(
-                $"Driver {driverProfileId} rejected successfully");
-
-            await _auditLogRepository.CreateAsync(new AuditLog
-            {
-                UserId = driver.UserId,
-                UserRole = UserRole.Driver,
-                Action = "Driver Rejected",
-                Status = AuditStatus.Success,
-                EntityType = "DriverProfile",
-                EntityId = driver.Id,
-                Description =
-                    $"Driver profile {driver.Id} was rejected. " +
-                    $"Reason: {request.RejectionReason}",
-                CreatedAt = DateTime.UtcNow
-            });
-
-            return new ApiResponse
-            {
-                ResponseCode = "200",
-                ResponseMessage = "Driver rejected successfully"
-            };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                $"Error occurred while rejecting driver {driverProfileId}");
-
-            return new ApiResponse
-            {
-                ResponseCode = "500",
-                ResponseMessage =
-                    "Error occurred while rejecting driver"
-            };
-        }
-    }
-
-    public async Task<ApiResponse> GetRidesAsync()
-    {
-        try
-        {
-            var rides = await _adminRepository.GetRidesAsync();
-
-            var result = new List<object>();
-
-            foreach (var ride in rides)
-            {
-                var passenger =
-                    await _userRepository.GetByIdAsync(ride.PassengerId);
-
-                object? driver = null;
-
-                if (ride.DriverProfileId.HasValue)
-                {
-                    var driverProfile =
-                        await _driverRepository
-                            .GetDriverProfileByIdAsync(
-                                ride.DriverProfileId.Value);
-
-                    if (driverProfile != null)
+                driver.Id,
+                driver.Status,
+                driver.ApprovalReason,
+                driver.ApprovedAt,
+                User = user == null
+                    ? null
+                    : new
                     {
-                        var driverUser =
-                            await _userRepository
-                                .GetByIdAsync(driverProfile.UserId);
+                        user.Id,
+                        user.FullName,
+                        user.Email,
+                        user.PhoneNumber
+                    }
+            });
+        }
 
-                        if (driverUser != null)
+        return new ApiResponse
+        {
+            ResponseCode = "200",
+            ResponseMessage = "Pending drivers retrieved successfully",
+            Data = result
+        };
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Error occurred while retrieving pending drivers");
+
+        return new ApiResponse
+        {
+            ResponseCode = "500",
+            ResponseMessage =
+                "Error occurred while retrieving pending drivers"
+        };
+    }
+}
+
+public async Task<ApiResponse> ApproveDriverAsync(
+    int driverProfileId)
+{
+    try
+    {
+        var driver =
+            await _adminRepository
+                .GetDriverProfileByIdAsync(driverProfileId);
+
+        if (driver == null)
+        {
+            return new ApiResponse
+            {
+                ResponseCode = "404",
+                ResponseMessage = "Driver profile not found"
+            };
+        }
+
+        if (driver.Status == ApprovalStatus.Approved)
+        {
+            return new ApiResponse
+            {
+                ResponseCode = "400",
+                ResponseMessage = "Driver is already approved"
+            };
+        }
+
+        var user =
+            await _userRepository.GetByIdAsync(driver.UserId);
+
+        if (user == null)
+        {
+            return new ApiResponse
+            {
+                ResponseCode = "404",
+                ResponseMessage = "Driver user not found"
+            };
+        }
+
+        driver.Status = ApprovalStatus.Approved;
+        driver.ApprovalReason = null;
+        driver.ApprovedAt = DateTime.UtcNow;
+
+        await _adminRepository.UpdateDriverProfileAsync(driver);
+
+        _logger.LogInformation(
+            "Driver {DriverProfileId} approved successfully",
+            driverProfileId);
+
+        await _auditLogRepository.CreateAsync(new AuditLog
+        {
+            UserId = driver.UserId,
+            UserRole = UserRole.Driver,
+            Action = "Driver Approved",
+            Status = AuditStatus.Success,
+            EntityType = "DriverProfile",
+            EntityId = driver.Id,
+            Description =
+                $"Driver profile {driver.Id} was approved",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        return new ApiResponse
+        {
+            ResponseCode = "200",
+            ResponseMessage = "Driver approved successfully"
+        };
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Error occurred while approving driver {DriverProfileId}",
+            driverProfileId);
+
+        return new ApiResponse
+        {
+            ResponseCode = "500",
+            ResponseMessage =
+                "Error occurred while approving driver"
+        };
+    }
+}
+
+public async Task<ApiResponse> RejectDriverAsync(
+    int driverProfileId,
+    RejectDriverRequestDto request)
+{
+    try
+    {
+        var driver =
+            await _adminRepository
+                .GetDriverProfileByIdAsync(driverProfileId);
+
+        if (driver == null)
+        {
+            return new ApiResponse
+            {
+                ResponseCode = "404",
+                ResponseMessage = "Driver profile not found"
+            };
+        }
+
+        if (driver.Status == ApprovalStatus.Rejected)
+        {
+            return new ApiResponse
+            {
+                ResponseCode = "400",
+                ResponseMessage = "Driver is already rejected"
+            };
+        }
+
+        var user =
+            await _userRepository.GetByIdAsync(driver.UserId);
+
+        if (user == null)
+        {
+            return new ApiResponse
+            {
+                ResponseCode = "404",
+                ResponseMessage = "Driver user not found"
+            };
+        }
+
+        driver.Status = ApprovalStatus.Rejected;
+        driver.ApprovalReason = request.RejectionReason;
+        driver.ApprovedAt = null;
+
+        await _adminRepository.UpdateDriverProfileAsync(driver);
+
+        _logger.LogInformation(
+            "Driver {DriverProfileId} rejected successfully",
+            driverProfileId);
+
+        await _auditLogRepository.CreateAsync(new AuditLog
+        {
+            UserId = driver.UserId,
+            UserRole = UserRole.Driver,
+            Action = "Driver Rejected",
+            Status = AuditStatus.Success,
+            EntityType = "DriverProfile",
+            EntityId = driver.Id,
+            Description =
+                $"Driver profile {driver.Id} was rejected. " +
+                $"Reason: {request.RejectionReason}",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        return new ApiResponse
+        {
+            ResponseCode = "200",
+            ResponseMessage = "Driver rejected successfully"
+        };
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Error occurred while rejecting driver {DriverProfileId}",
+            driverProfileId);
+
+        return new ApiResponse
+        {
+            ResponseCode = "500",
+            ResponseMessage =
+                "Error occurred while rejecting driver"
+        };
+    }
+}
+
+public async Task<ApiResponse> GetRidesAsync()
+{
+    try
+    {
+        var rides = await _adminRepository.GetRidesAsync();
+
+        var result = new List<object>();
+
+        foreach (var ride in rides)
+        {
+            var passenger =
+                await _userRepository.GetByIdAsync(
+                    ride.PassengerId);
+
+            object? driver = null;
+
+            if (ride.DriverProfileId.HasValue)
+            {
+                var driverProfile =
+                    await _driverRepository
+                        .GetDriverProfileByIdAsync(
+                            ride.DriverProfileId.Value);
+
+                if (driverProfile != null)
+                {
+                    var driverUser =
+                        await _userRepository
+                            .GetByIdAsync(driverProfile.UserId);
+
+                    if (driverUser != null)
+                    {
+                        driver = new
                         {
-                            driver = new
-                            {
-                                driverProfile.Id,
-                                Name = driverUser.FullName,
-                                PhoneNumber =
-                                    driverUser.PhoneNumber
-                            };
-                        }
+                            driverProfile.Id,
+                            Name = driverUser.FullName,
+                            PhoneNumber = driverUser.PhoneNumber
+                        };
                     }
                 }
-
-                result.Add(new
-                {
-                    ride.Id,
-                    ride.RideReference,
-                    ride.PickupAddress,
-                    ride.DestinationAddress,
-                    ride.Status,
-                    ride.RequestedAt,
-                    ride.CompletedAt,
-                    ride.CancelledAt,
-                    ride.CancellationReason,
-
-                    Passenger = passenger == null
-                        ? null
-                        : new
-                        {
-                            passenger.Id,
-                            passenger.FullName,
-                            passenger.Email,
-                            passenger.PhoneNumber
-                        },
-
-                    Driver = driver
-                });
             }
 
-            return new ApiResponse
+            result.Add(new
             {
-                ResponseCode = "200",
-                ResponseMessage = "Rides retrieved successfully",
-                Data = result
-            };
+                ride.Id,
+                ride.RideReference,
+                ride.PickupAddress,
+                ride.DestinationAddress,
+                ride.Status,
+                ride.RequestedAt,
+                ride.CompletedAt,
+                ride.CancelledAt,
+                ride.CancellationReason,
+
+                Passenger = passenger == null
+                    ? null
+                    : new
+                    {
+                        passenger.Id,
+                        passenger.FullName,
+                        passenger.Email,
+                        passenger.PhoneNumber
+                    },
+
+                Driver = driver
+            });
         }
-        catch (Exception ex)
+
+        return new ApiResponse
         {
-            _logger.LogError(
-                ex,
-                "Error occurred while retrieving rides");
-
-            return new ApiResponse
-            {
-                ResponseCode = "500",
-                ResponseMessage =
-                    "Error occurred while retrieving rides"
-            };
-        }
+            ResponseCode = "200",
+            ResponseMessage = "Rides retrieved successfully",
+            Data = result
+        };
     }
-
-    public async Task<ApiResponse> GetAuditLogsAsync()
+    catch (Exception ex)
     {
-        try
-        {
-            var logs = await _adminRepository.GetAuditLogsAsync();
+        _logger.LogError(
+            ex,
+            "Error occurred while retrieving rides");
 
-            return new ApiResponse
-            {
-                ResponseCode = "200",
-                ResponseMessage =
-                    "Audit logs retrieved successfully",
-                Data = logs.Select(log => new
-                {
-                    log.Id,
-                    log.UserId,
-                    log.UserRole,
-                    log.Action,
-                    log.Status,
-                    log.EntityType,
-                    log.EntityId,
-                    log.Description,
-                    log.CreatedAt
-                })
-            };
-        }
-        catch (Exception ex)
+        return new ApiResponse
         {
-            _logger.LogError(
-                ex,
-                "Error occurred while retrieving audit logs");
-
-            return new ApiResponse
-            {
-                ResponseCode = "500",
-                ResponseMessage =
-                    "Error occurred while retrieving audit logs"
-            };
-        }
+            ResponseCode = "500",
+            ResponseMessage =
+                "Error occurred while retrieving rides"
+        };
     }
-}   
+}
+
+public async Task<ApiResponse> GetAuditLogsAsync()
+{
+    try
+    {
+        var logs = await _adminRepository.GetAuditLogsAsync();
+
+        return new ApiResponse
+        {
+            ResponseCode = "200",
+            ResponseMessage =
+                "Audit logs retrieved successfully",
+            Data = logs.Select(log => new
+            {
+                log.Id,
+                log.UserId,
+                log.UserRole,
+                log.Action,
+                log.Status,
+                log.EntityType,
+                log.EntityId,
+                log.Description,
+                log.CreatedAt
+            })
+        };
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(
+            ex,
+            "Error occurred while retrieving audit logs");
+
+        return new ApiResponse
+        {
+            ResponseCode = "500",
+            ResponseMessage =
+                "Error occurred while retrieving audit logs"
+        };
+    }
+}
+
+}

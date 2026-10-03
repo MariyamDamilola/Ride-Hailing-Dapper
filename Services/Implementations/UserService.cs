@@ -8,7 +8,7 @@ using RideHailingApi_Dapper.Services.Interfaces;
 
 namespace RideHailingApi_Dapper.Services.Implementations;
 
-public class UserService
+public class UserService : IUserService
 {
      private readonly IUserRepository _userRepository;
     private readonly IEmailService _emailService;

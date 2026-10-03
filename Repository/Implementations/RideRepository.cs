@@ -22,22 +22,20 @@ public class RideRepository : IRideRepository
                 RideReference,
                 PassengerId,
                 DriverProfileId,
-                PickupLocation,
-                Destination,
+                PickupAddress,
+                DestinationAddress,
                 Status,
-                CreatedAt,
-                UpdatedAt
+                RequestedAt
             )
             VALUES
             (
                 @RideReference,
                 @PassengerId,
                 @DriverProfileId,
-                @PickupLocation,
-                @Destination,
+                @PickupAddress,
+                @DestinationAddress,
                 @Status,
-                @CreatedAt,
-                @UpdatedAt
+                @RequestedAt
             );
 
             SELECT *
@@ -45,7 +43,9 @@ public class RideRepository : IRideRepository
             WHERE Id = CAST(SCOPE_IDENTITY() AS INT);
             """;
 
-        return await connection.QuerySingleAsync<Ride>(sql, ride);
+        return await connection.QuerySingleAsync<Ride>(
+            sql,
+            ride);
     }
 
     public async Task<Ride?> GetRideByIdAsync(int rideId)
@@ -86,7 +86,7 @@ public class RideRepository : IRideRepository
             SELECT *
             FROM Rides
             WHERE PassengerId = @PassengerId
-            ORDER BY CreatedAt DESC
+            ORDER BY RequestedAt DESC
             """;
 
         return await connection.QueryAsync<Ride>(
@@ -102,7 +102,7 @@ public class RideRepository : IRideRepository
             SELECT *
             FROM Rides
             WHERE DriverProfileId = @DriverProfileId
-            ORDER BY CreatedAt DESC
+            ORDER BY RequestedAt DESC
             """;
 
         return await connection.QueryAsync<Ride>(
@@ -132,7 +132,9 @@ public class RideRepository : IRideRepository
             SET
                 DriverProfileId = @DriverProfileId,
                 Status = @Status,
-                UpdatedAt = @UpdatedAt
+                CompletedAt = @CompletedAt,
+                CancelledAt = @CancelledAt,
+                CancellationReason = @CancellationReason
             WHERE Id = @Id
             """;
 

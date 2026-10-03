@@ -1,5 +1,4 @@
-﻿using RideHailingApi_Dapper.Domain.Entities;
-using RideHailingApi_Dapper.DTO.Request.Auth;
+﻿using RideHailingApi_Dapper.DTO.Request.Auth;
 using RideHailingApi_Dapper.DTO.Request.User;
 using RideHailingApi_Dapper.DTO.Response;
 

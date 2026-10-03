@@ -1,7 +1,8 @@
 using System.Text;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using RideHailingApi_Dapper.Data;
 using RideHailingApi_Dapper.Endpoints;
 using RideHailingApi_Dapper.Repository.Implementations;
@@ -12,9 +13,7 @@ using RideHailingApi_Dapper.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IDbConnectionFactory>(_ =>
-    new SqlConnectionFactory(
-        builder.Configuration.GetConnectionString("DefaultConnection")!));
+builder.Services.AddSingleton<DbConnectionFactory>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -103,12 +102,9 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
 app.MapAuthEndpoints();
 app.MapPassengerEndpoints();
 app.MapDriverEndpoints();
 app.MapAdminEndpoints();
 
 app.Run();
-app.Run();
-
